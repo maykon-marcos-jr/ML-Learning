@@ -1,3 +1,4 @@
 data/
+datasets/
 .vscode
 src/__pycache__/
