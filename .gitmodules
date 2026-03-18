@@ -1,0 +1,3 @@
+[submodule ".docs-ML"]
+	path = .docs-ML
+	url = https://github.com/maykon-marcos-jr/ML-Learning.wiki.git
