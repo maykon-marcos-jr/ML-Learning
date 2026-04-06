@@ -8,6 +8,7 @@ jupyter-server==2.14.0
 matplotlib==3.10.8
 mlxtend==0.23.4
 notebook==7.5.5
+opencv-python==4.13.0.92
 pandas==2.2.2
 pathlib==1.0.1
 portpicker==1.5.2
