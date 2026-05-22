@@ -3,8 +3,8 @@ export PYENV_ROOT="$HOME/.pyenv"
 [[ -d $PYENV_ROOT/bin ]] && export PATH="$PYENV_ROOT/bin:$PATH"
 eval "$(pyenv init - bash)"
 pyenv install 3.12.13
-pyenv virtualenv 3.12.13 .colab_env
-pyenv activate .colab_env
+pyenv virtualenv 3.12.13 .ml_colab_env
+pyenv activate .ml_colab_env
 pip install --upgrade pip setuptools wheel
 TMPDIR=~/.cache pip install -r requirements.txt
-python -m ipykernel install --user --name=colab_venv --display-name "Colab 3.12.13 (venv)"
+python -m ipykernel install --user --name=ml_colab_env --display-name "ML Colab 3.12.13 (venv)"
