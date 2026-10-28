@@ -1,4 +1,7 @@
 
+import torch
+from torch import nn
+
 def get_out_shape(
         in_shape: tuple[int, int],
         kernel: tuple[int, int],

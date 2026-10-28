@@ -1,41 +1,10 @@
-
 import torch
-print("PyTorch Version:", torch.__version__)
 from torch import nn, Tensor, optim
-from torch.utils.data import DataLoader
-# progress bar
-from tqdm.auto import tqdm # to automatically guess the environment
-# To verify the speed performance
-from timeit import default_timer as timer
 import matplotlib.pyplot as plt
 
-RND_SEED = 0
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
-device = torch.device(device)
 
-print("Running PyTorch on:", device)
-
-import requests
-from pathlib import Path
-
-if Path("src/helper_functions.py").is_file():
-    print("request satisfied")
-else:
-    req = requests.get("https://raw.githubusercontent.com/mrdbourke/pytorch-deep-learning/refs/heads/main/helper_functions.py")
-    with open("src/helper_functions.py", "wb") as f:
-        f.write(req.content)
-
-def print_train_timer(start: float,
-                      end: float,
-                      device: torch.device = None
-                      ) -> float:
-    """
-    prints the difference between start and end
-    """
-    total_time = end - start
-    print(f"Total time on {device}: {total_time:.3f} seconds")
-    return total_time
-
+from torchvision import transforms, datasets
 
 def plot_loss_curves(results: dict[str, list[float]]):
     """Plots training curves of a results dictionary.
@@ -76,8 +45,7 @@ def plot_loss_curves(results: dict[str, list[float]]):
     plt.plot(epochs, test_accuracy, label='test_evaluation')
     plt.title('Evaluation')
     plt.xlabel('Epochs')
-    plt.legend();
-
+    plt.legend()
 
 def train_step(
         model: nn.Module,
@@ -90,23 +58,32 @@ def train_step(
     ) -> tuple[Tensor, Tensor|None]:
     """
     Execute a simple training step on the model based on the data
+
         Wheter the data is a batch or a full dataset
+
     It uses the loss function to guide the optimizer
+
     It `does not` set the model to train mode
 
-    *** Args
+    *** Parameters
     * `X`: The training data
     * `y`: The labels corresponding to the training data
-    * `loss_fn`: Measures of predictions error compared with the labels `y`
-        must receive the prediction and the labels in this specific order
-    * `optimizer`: The optimizer used to calibrate the model parameters
-        must be previously set to work with the model parameter
-    * `is_classification`: Wheter is a classification mode or not
-        If it is, is assumed that the `eval_fn` will require the use of `torch.argmax(dim=1)` to be applied on the predictions
+    * `loss_fn`: Measures of predictions error compared with the labels `y`.
+
+            must receive the prediction and the labels in this specific order
+    * `optimizer`: The optimizer used to calibrate the model parameters.
+
+            must be previously set to work with the model parameter
+    * `is_classification`: Wheter is a classification mode or not.
+
+            If it is, is assumed that the `eval_fn` will require the use of `torch.argmax(dim=1)` to be applied on the predictions
     * `eval_fn`: Optional.
-        A different function to measure the model current performance
-        Must receive the parameters in the Scikit Learn order (that is, labels/y first, then the predictions)
-        Must return a torch.Tensor-compatible value
+
+            A different function to measure the model current performance.
+
+            Must receive the parameters in the Scikit Learn order (that is, labels/y first, then the predictions).
+
+            Must return a torch.Tensor-compatible value.
 
     *** Returns
     * `loss`: the loss value
@@ -146,20 +123,27 @@ def test_step(
     ) -> tuple[Tensor, Tensor|None]:
     """
     Execute a simple testing step on the model based on the data
+
         Wheter the data is a batch or a full dataset
+
     It `does not` set the model to eval mode nor inference mode
 
-    *** Args
+    *** Parameters
     * `X`: The testing data
     * `y`: The labels corresponding to the testing data
     * `loss_fn`: Measures of predictions error compared with the labels `y`
-        must receive the prediction and the labels in this specific order
+
+            must receive the prediction and the labels in this specific order
     * `is_classification`: Wheter is a classification mode or not
-        If it is, is assumed that the `eval_fn` will require the use of `torch.argmax(dim=1)` to be applied on the predictions
+
+            If it is, is assumed that the `eval_fn` will require the use of `torch.argmax(dim=1)` to be applied on the predictions
     * `eval_fn`: Optional.
-        A different function to measure the model current performance
-        Must receive the parameters in the Scikit Learn order (that is, labels/y first, then the predictions)
-        Must return a torch.Tensor-compatible value
+
+            A different function to measure the model current performance
+
+            Must receive the parameters in the Scikit Learn order (that is, labels/y first, then the predictions)
+
+            Must return a torch.Tensor-compatible value
 
     *** Returns
     * `loss`: the loss value
@@ -174,11 +158,13 @@ def test_step(
 
     eval = None
     if not eval_fn is None:
-        p = preds.softmax(dim=1).argmax(dim=1) if is_classification else preds
+        p = preds.argmax(dim=1) if is_classification else preds
         eval = torch.tensor(eval_fn(y, p))
 
     return loss, eval
 
+
+from torch.utils.data import DataLoader
 
 def training_loop_batch(
         model: nn.Module,
@@ -191,20 +177,27 @@ def training_loop_batch(
     ) -> tuple[Tensor, Tensor|None]:
     """
     Performs a epoch of model training
+
     Iterating through all the dataloader in batches
 
-    *** Args
+    *** Parameters
     * `data`: The dataloader contaning the data in batches
     * `loss_fn`: Measures of predictions error compared with the labels `y`
-        must receive the prediction and the labels in this specific order
+
+            must receive the prediction and the labels in this specific order
     * `optimizer`: The optimizer used to calibrate the model parameters
-        must be previously set to work with the model parameter
+
+            must be previously set to work with the model parameter
     * `is_classification`: Wheter is a classification mode or not
-        If it is, is assumed that the `eval_fn` will require the use of `torch.argmax(dim=1)` to be applied on the predictions
+
+            If it is, is assumed that the `eval_fn` will require the use of `torch.argmax(dim=1)` to be applied on the predictions
     * `eval_fn`: Optional.
-        A different function to measure the model current performance
-        Must receive the parameters in the Scikit Learn order (that is, labels/y first, then the predictions)
-        Must return a torch.Tensor-compatible value
+
+            A different function to measure the model current performance
+
+            Must receive the parameters in the Scikit Learn order (that is, labels/y first, then the predictions)
+
+            Must return a torch.Tensor-compatible value
 
     *** Returns
     * `loss`: the loss value
@@ -250,18 +243,24 @@ def testing_loop_batch(
     ) -> tuple[Tensor, Tensor|None]:
     """
     Performs a epoch of model testing
+
     Iterating through all the dataloader in batches
 
-    *** Args
+    *** Parameters
     * `data`: The dataloader contaning the data in batches
     * `loss_fn`: Measures of predictions error compared with the labels `y`
-        must receive the prediction and the labels in this specific order
+
+            must receive the prediction and the labels in this specific order
     * `is_classification`: Wheter is a classification mode or not
-        If it is, is assumed that the `eval_fn` will require the use of `torch.argmax(dim=1)` to be applied on the predictions
+
+            If it is, is assumed that the `eval_fn` will require the use of `torch.argmax(dim=1)` to be applied on the predictions
     * `eval_fn`: Optional.
-        A different function to measure the model current performance
-        Must receive the parameters in the Scikit Learn order (that is, labels/y first, then the predictions)
-        Must return a torch.Tensor-compatible value
+
+            A different function to measure the model current performance
+
+            Must receive the parameters in the Scikit Learn order (that is, labels/y first, then the predictions)
+
+            Must return a torch.Tensor-compatible value
 
     *** Returns
     * `loss`: the loss value
@@ -298,6 +297,62 @@ def testing_loop_batch(
     return accumulate_loss, accumulate_eval
 
 
+# progress bar
+from tqdm.auto import tqdm # to automatically guess the environment
+# To verify the speed performance
+from timeit import default_timer as timer
+
+
+def print_train_timer(start: float,
+                      end: float,
+                      device: torch.device|None = None
+                      ) -> float:
+    """
+    prints the difference between start and end
+    """
+    total_time = end - start
+    print(f"Total time on {device}: {total_time:.3f} seconds")
+    return total_time
+
+
+def eval_model(
+        model: nn.Module,
+        data_loader: DataLoader,
+        loss_fn: nn.Module,
+        device: torch.device|str,
+        eval_fn=None,
+        training_time:float=-1.0,
+        ) -> dict:
+    if type(device) == str:
+        device = torch.device(device)
+    loss: Tensor = Tensor([0]).to(device)
+    eval: Tensor = Tensor([0]).to(device)
+
+    model.eval()
+    with torch.inference_mode():
+        for X, y in tqdm(data_loader):
+            X = X.to(device)
+            y = y.to(device)
+            y_pred = model(X)
+
+            loss += loss_fn(y_pred, y)
+            if not eval_fn is None:
+                eval += eval_fn(
+                    y_true=y,
+                    y_pred=y_pred.argmax(dim=1)
+                )
+
+        loss /= len(data_loader)
+        eval /= len(data_loader)
+    return {
+        "model_name": model.__class__.__name__,
+        "model_loss": loss.item(),
+        "model_eval (%)": eval.item(),
+        "device": str(device),
+        "training_time (sec)": training_time,
+        }
+
+
 def train_model_with_batches(
         model: nn.Module,
         train_data: DataLoader,
@@ -306,7 +361,7 @@ def train_model_with_batches(
         optimizer_fn,
         lr: float,
         N_EPOCHS: int,
-        RND_SEED: int=None, # type: ignore
+        RND_SEED: int|None=None,
         eval_fn=None,
         is_classification: bool=False,
     ) -> dict:
@@ -314,8 +369,10 @@ def train_model_with_batches(
     Executes a full model training
     Iterating through all the dataloader in batches
 
-    *** Args
-    * `data`: The dataloader contaning the data in batches
+    *** Parameters
+    * `model`: The neural network module to be trained
+    * `train_data`: The dataloader contaning the training data in batches
+    * `test_data`: The dataloader contaning the test data in batches
     * `loss_fn`: Measures of predictions error compared with the labels `y`
         must receive the prediction and the labels in this specific order
     * `optimizer`: The optimizer module (non-instantiated) used to calibrate the model parameters
@@ -328,38 +385,26 @@ def train_model_with_batches(
         Must receive the parameters in the Scikit Learn order (that is, labels/y first, then the predictions)
         Must return a torch.Tensor-compatible value
     * `is_classification`: Wheter is a classification mode or not
-        If it is, is assumed that the `eval_fn` will require the use of `torch.argmax(torch.softmax(dim=1), dim=1)` to be applied on the predictions
+        If it is, is assumed that the `eval_fn` will require the use of `torch.argmax(dim=1)` to be applied on the predictions
     """
-    if not RND_SEED is None:
-        torch.manual_seed(RND_SEED)
+    torch.manual_seed(RND_SEED)
 
     optimizer = optimizer_fn(
         params=model.parameters(),
         lr=lr
     )
-
-    results = {
-        "train_loss": [],
-        "train_eval": [],
-        "test_loss": [],
-        "test_eval": [],
-        "training_time": 0.0,
-    }
-
     device = next(model.parameters()).device
 
     # Start counting the time
     start = timer()
 
-    for ep in tqdm(range(1, N_EPOCHS+1)):
-        train_loss, train_eval = training_loop_batch(
+    for ep in range(1, N_EPOCHS+1):
+        train_loss, _ = training_loop_batch(
             model,
             train_data,
             loss_fn,
             optimizer,
             device,
-            eval_fn,
-            is_classification,
         )
         test_loss, test_eval = testing_loop_batch(
             model,
@@ -371,38 +416,20 @@ def train_model_with_batches(
         )
         print(f"Epoch: {ep}")
         print(f" - Train Loss: {train_loss:.4f}")
-        print(f" - Train Eval: {train_eval:.2f}%")
         print(f" - Test Loss:  {test_loss:.4f}")
         print(f" - Test Eval: {test_eval:.2f}%")
-        results["train_loss"].append(train_loss.item())
-        results["train_eval"].append(train_eval.item())
-        results["test_loss"].append(test_loss.item())
-        results["test_eval"].append(test_eval.item())
 
     training_time = print_train_timer(
         start,
         timer(),
         device,
     )
-    results["training_time"] = training_time
 
-    return results
-
-
-def eval_model(
-        model: nn.Module,
-        data_loader: DataLoader,
-        loss_fn: nn.Module,
-        device: torch.device,
-        eval_fn=None,
-        ) -> dict:
-    loss, eval = testing_loop_batch(
-        model, data_loader, loss_fn,
-        device, eval_fn, True,
+    return eval_model(
+        model,
+        test_data,
+        loss_fn,
+        device,
+        eval_fn,
+        training_time,
     )
-    return {
-        "model_name": model.__class__.__name__,
-        "model_loss": loss.item(),
-        "model_eval (%)": eval.item(),
-        "device": str(device),
-        }

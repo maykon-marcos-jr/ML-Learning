@@ -1,4 +1,7 @@
 data/
 datasets/
 .vscode
-src/__pycache__/
+*/__pycache__/
+*/*/__pycache__/
+*/*/*/__pycache__/
+notebooks/PyTorch/models/
