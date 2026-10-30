@@ -47,6 +47,7 @@ def plot_loss_curves(results: dict[str, list[float]]):
     plt.xlabel('Epochs')
     plt.legend()
 
+
 def train_step(
         model: nn.Module,
         X: Tensor,
