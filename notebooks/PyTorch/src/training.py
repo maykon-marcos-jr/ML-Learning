@@ -4,7 +4,9 @@ import matplotlib.pyplot as plt
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
-from torchvision import transforms, datasets
+from torch.utils.data import DataLoader
+from torch.utils.tensorboard import SummaryWriter
+
 
 def plot_loss_curves(results: dict[str, list[float]]):
     """Plots training curves of a results dictionary.
@@ -165,11 +167,9 @@ def test_step(
     return loss, eval
 
 
-from torch.utils.data import DataLoader
-
 def training_loop_batch(
         model: nn.Module,
-        data: DataLoader,
+        data: DataLoader[torch.Tensor],
         loss_fn: nn.Module,
         optimizer: optim.Optimizer,
         device: torch.device,
@@ -236,7 +236,7 @@ def training_loop_batch(
 
 def testing_loop_batch(
         model: nn.Module,
-        data: DataLoader,
+        data: DataLoader[torch.Tensor],
         loss_fn: nn.Module,
         device: torch.device,
         eval_fn=None,
@@ -356,8 +356,8 @@ def eval_model(
 
 def train_model_with_batches(
         model: nn.Module,
-        train_data: DataLoader,
-        test_data: DataLoader,
+        train_data: DataLoader[torch.Tensor],
+        test_data: DataLoader[torch.Tensor],
         loss_fn: nn.Module,
         optimizer_fn,
         lr: float,
@@ -365,6 +365,7 @@ def train_model_with_batches(
         RND_SEED: int|None=None,
         eval_fn=None,
         is_classification: bool=False,
+        verbose:int=0,
     ) -> dict:
     """
     Executes a full model training
@@ -387,14 +388,23 @@ def train_model_with_batches(
         Must return a torch.Tensor-compatible value
     * `is_classification`: Wheter is a classification mode or not
         If it is, is assumed that the `eval_fn` will require the use of `torch.argmax(dim=1)` to be applied on the predictions
+    * `verbose`: Determines the amount of printing done through training. 0 is none, 1 or more is for each epoch.
     """
+
+    if not train_data:
+        return {}
     torch.manual_seed(RND_SEED)
+    torch.cuda.manual_seed(RND_SEED if RND_SEED else 0)
+
 
     optimizer = optimizer_fn(
         params=model.parameters(),
         lr=lr
     )
     device = next(model.parameters()).device
+
+    # writer for experiment treacking
+    writer = SummaryWriter()
 
     # Start counting the time
     start = timer()
@@ -415,16 +425,44 @@ def train_model_with_batches(
             eval_fn,
             is_classification,
         )
-        print(f"Epoch: {ep}")
-        print(f" - Train Loss: {train_loss:.4f}")
-        print(f" - Test Loss:  {test_loss:.4f}")
-        print(f" - Test Eval: {test_eval:.2f}%")
+
+        if verbose > 0:
+            print(f"Epoch: {ep}")
+            print(f" - Train Loss: {train_loss:.4f}")
+            print(f" - Test Loss:  {test_loss:.4f}")
+            print(f" - Test Eval: {test_eval:.2f}%")
+
+        writer.add_scalars(
+            main_tag = "Loss",
+            tag_scalar_dict = {
+                "train_loss": train_loss,
+                "test_loss": test_loss,
+            },
+            global_step = ep
+        )
+        writer.add_scalars(
+            main_tag="Eval",
+            tag_scalar_dict={
+                "test_acc": test_eval,
+            },
+            global_step=ep
+        )
+        rnd = None
+        for x, _ in train_data:
+            rnd = torch.randn_like(x).to(device)
+
+        writer.add_graph(
+            model=model,
+            input_to_model=rnd,
+        )
 
     training_time = print_train_timer(
         start,
         timer(),
         device,
     )
+
+    writer.close()
 
     return eval_model(
         model,

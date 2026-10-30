@@ -47,8 +47,8 @@ def find_classes(Dir: str|Path) -> Tuple[List[str], Dict[str, int]]:
 
 
 def create_img_dataloaders(
-    train_dir: str,
-    test_dir: str,
+    train_dir: str|Path,
+    test_dir: str|Path,
     transform: transforms.Compose,
     batch_size: int,
     num_workers: int=NUM_WORKERS

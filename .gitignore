@@ -5,3 +5,5 @@ datasets/
 */*/__pycache__/
 */*/*/__pycache__/
 notebooks/PyTorch/models/
+notebooks/PyTorch/runs/
+notebooks/PyTorch/data/
